@@ -17,13 +17,15 @@
 (require 's)
 (require 'cl-lib)
 
-(defgroup hydrapop
+(defgroup hydrapop nil
   "Project-specific popup boards."
   :group 'bindings
   :prefix "hydrapop-")
 
-(defcustom hydrapop-underscore-replacement "="
-  :group hydrapop)
+(defcustom hydrapop-underscore-replacement "."
+  "Underscore replacement in hydra strings."
+  :group 'hydrapop
+  :type 'string)
 
 (cl-defstruct hydrapop-column description entries)
 (cl-defstruct hydrapop-entry description key function color)
@@ -31,13 +33,20 @@
 (defmacro hydrapop-define-board (name body &optional docstring &rest heads)
   (defhydra name body docstring heads))
 
-(defun hydrapop--gen-docstring (banner columns)
-  (let* ((s-cols (mapcar (lambda (c) (hydrapop--column-str c (hydrapop--width c)))))
-         (split-cols (mapcar #'hydrapop-splitlines s-cols))
+(defun hydrapop--gen-body-string (banner columns)
+  "Generate a body string for BANNER and COLUMNS."
+  (let* ((width (-max (-map #'hydrapop--width columns)))
+         (s-cols (--map (hydrapop--column-str it width) columns))
+         (split-cols (-map #'s-lines s-cols))
          (height (-max (-map #'length split-cols)))
          (banner-processed (hydrapop--v-center-string
                             (s-replace "_" hydrapop-underscore-replacement banner)
-                            height)))))
+                            height))
+         (padding (s-repeat width " "))
+         (zipped (apply #'-zip-lists
+                        (append (list (s-lines banner-processed))
+                                (apply (-partial #'-pad padding) split-cols)))))
+    (s-join "\n" (--map (s-join "" it) zipped))))
 
 (defun hydrapop--column-str (column width)
   (pcase-let* ((desc (hydrapop-column-description column))
@@ -49,9 +58,10 @@
                          "\n"))))
 
 (defun hydrapop--entry-str (entry width)
-  (format " __%s__: %s"
-          (hydrapop-entry-key entry)
-          (hydrapop-entry-description entry)))
+  "Return ENTRY as a string padded to WIDTH."
+  (s-pad-right width " " (format " __%s__: %s"
+                                 (hydrapop-entry-key entry)
+                                 (hydrapop-entry-description entry))))
 
 (defun hydrapop--center-string (s width)
   (pcase-let ((`(,left ,r) (cl-floor (- width (length s)) 2)))
@@ -61,22 +71,18 @@
   "Center the string S vertically to HEIGHT."
   (pcase-let* ((split (s-lines s))
                (`(,left ,r) (cl-floor (- height (length split)) 2))
-               (remainder (if (> 0 left) r 0))
-               (width (-max (-map #'length split)))
+               (remainder (if (< 0 left) r 0))
+               (width (+ 3 (-max (-map #'length split))))
                (padding-line (s-repeat width " ")))
     (s-concat (s-join "\n" (-repeat (+ left remainder) padding-line))
-              "\n"
+              (if (< 0 left) "\n" "")
               (s-join "\n" (--map (s-pad-right width " " it) split))
-              "\n"
+              (if (< 0 left) "\n" "")
               (s-join "\n" (-repeat left padding-line)))))
 
-(defun hydrapop--center-string (s width)
-  (pcase-let ((`(,left ,r) (cl-floor (- width (length s)) 2)))
-    (s-concat (s-repeat (+ r left) " ") s (s-repeat left " "))))
-
-
 (defun hydrapop--width (obj)
-  (cond ((hydrapop-entry-p obj) (+ 7 (length (hydrapop-entry-description obj))))
+  "Return the width in chars of the entry or column OBJ."
+  (cond ((hydrapop-entry-p obj) (+ 8 (length (hydrapop-entry-description obj))))
         ((hydrapop-column-p obj) (max (-max (mapcar #'hydrapop--width
                                                     (hydrapop-column-entries obj)))
                                       (length (hydrapop-column-description obj))))
@@ -93,12 +99,20 @@
                       (make-hydrapop-entry :description "Close Please"
                                            :key "C"
                                            :function #'ignore
+                                           :color 'blue)
+                      (make-hydrapop-entry :description "Reopen"
+                                           :key "R"
+                                           :function #'ignore
+                                           :color 'blue)
+                      (make-hydrapop-entry :description "Deopen"
+                                           :key "D"
+                                           :function #'ignore
                                            :color 'blue))))
 
-(setq banner "   /\\/\\   ‗‗‗| |‗ ‗‗ ‗| |‗‗‗ 
-  /    \\ / ‗ \\ ‗‗/ ‗` | / ‗‗|
- / /\\/\\ \\  ‗‗/ || (‗| | \\‗‗ \\
- \\/    \\/\\‗‗‗|\\‗‗\\‗‗,‗|‗|‗‗‗/")
+(setq banner "   /\\/\\   ___| |_ __ _| |___ 
+  /    \\ / _ \\ __/ _` | / __|
+ / /\\/\\ \\  __/ || (_| | \\__ \\
+ \\/    \\/\\___|\\__\\__,_|_|___/")
 
 (defhydra hydra-test (:color blue :hint nil :foreign-keys nil)
   "   /\\/\\   ‗‗‗| |‗ ‗‗ ‗| |‗‗‗ 
