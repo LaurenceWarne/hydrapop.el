@@ -28,7 +28,7 @@
   :type 'string)
 
 (cl-defstruct hydrapop-column description entries)
-(cl-defstruct hydrapop-entry description key function color)
+(cl-defstruct hydrapop-entry description key command color)
 
 ;; (defmacro hydrapop-define-board (name body banner columns)
 ;;   `(let ((docstring (hydrapop--gen-docstring ,banner ,columns)))
@@ -43,11 +43,11 @@
   (let ((docstring (hydrapop--gen-docstring banner columns)))
     `(defhydra
        ,name
-       (:color pink :columns ,(length columns) :hint nil)
+       (:color pink :columns ,(length columns) :hint nil :exit t)
        ,docstring
        ,@(append
           (-map (lambda (e) (list (hydrapop-entry-key e)
-                                  (hydrapop-entry-function e)))
+                                  (hydrapop-entry-command e)))
                 (apply #'append (-map #'hydrapop-column-entries columns)))
           (list '("q" quit-window "quit" :color blue))))))
 
@@ -67,6 +67,7 @@
     (s-concat "\n" (s-join "\n" (--map (s-join "" it) zipped)) "\n")))
 
 (defun hydrapop--column-str (column width)
+  "Return COLUMN stringified and padded to WIDTH."
   (pcase-let* ((desc (hydrapop-column-description column))
                (heading (hydrapop--center-string desc width))
                (break (make-string width ?-)))
@@ -82,6 +83,7 @@
                                  (hydrapop-entry-description entry))))
 
 (defun hydrapop--center-string (s width)
+  "Center the string S to WIDTH."
   (pcase-let ((`(,left ,r) (cl-floor (- width (length s)) 2)))
     (s-concat (make-string (+ r left) ?\ ) s (s-repeat left " "))))
 
@@ -112,31 +114,58 @@
        :description "My Cool Stuffs"
        :entries (list (make-hydrapop-entry :description "Open"
                                            :key "O"
-                                           :function (lambda() (interactive) (message "hi")))
+                                           :command (lambda() (interactive) (message "hi")))
                       (make-hydrapop-entry :description "Close Please"
                                            :key "C"
-                                           :function #'ignore)
+                                           :command #'ignore)
                       (make-hydrapop-entry :description "Reopen"
                                            :key "R"
-                                           :function #'ignore)
+                                           :command #'ignore)
                       (make-hydrapop-entry :description "Deopen"
                                            :key "D"
-                                           :function #'ignore))))
+                                           :command #'ignore)))
+      col2
+      (make-hydrapop-column
+       :description "My Cool Stuffs"
+       :entries (list (make-hydrapop-entry :description "Open"
+                                           :key "O"
+                                           :command (lambda() (interactive) (message "hi")))
+                      (make-hydrapop-entry :description "Close Please"
+                                           :key "C"
+                                           :command #'ignore)
+                      (make-hydrapop-entry :description "Reopen"
+                                           :key "R"
+                                           :command #'ignore))))
 
-(setq banner "   /\\/\\   ___| |_ __ _| |___ 
-  /    \\ / _ \\ __/ _` | / __|
- / /\\/\\ \\  __/ || (_| | \\__ \\
- \\/    \\/\\___|\\__\\__,_|_|___/")
+
+(defun hydrapop-github-column ()
+  "Return a hydrapop column for Github interaction, requires Magit."
+  (require 'magit)
+  (cl-flet ((hp-open-gh-url () (interactive)
+                            (let* ((remotes (magit-list-remotes))
+                                   (remote (if (cl-member "upstream" remotes
+                                                          :test #'string=)
+                                               "upstream"
+                                             (car remotes)))
+                                   (url (shell-command-to-string
+                                         (format "git remote get-url %s"
+                                                 remote))))
+                              (browse-url
+                               (if (s-starts-with-p "ssh://" url)
+                                   (s-concat "http://"
+                                             (s-chop-prefix "ssh://git@" url))
+                                 url))))
+            (hp-pr-current-branch () (interactive) nil))
+    (make-hydrapop-column
+     :description "Github"
+     :entries (list (make-hydrapop-entry :description "Open Repository URL"
+                                         :key "o"
+                                         :command #'hp-open-gh-url)
+                    (make-hydrapop-entry :description "PR Current Branch"
+                                         :key "p"
+                                         :command #'hydrapop-pr-current-branch)))))
+
 
 (provide 'hydrapop)
 
 ;;; hydrapop.el ends here
-(defhydra my-board2 (:color pink :columns 1 :hint nil) "
-                                  My Cool Stuffs  
-   /\\/\\   ...| |. .. .| |...   ------------------
-  /    \\ / . \\ ../ .` | / ..|    _O_: Open        
- / /\\/\\ \\  ../ || (.| | \\.. \\    _C_: Close Please
- \\/    \\/\\...|\\..\\..,.|.|.../    _R_: Reopen      
-                                 _D_: Deopen
-"
-  ("O" (closure (t) nil (interactive) (message "hi"))) ("C" ignore) ("R" ignore) ("D" ignore) ("q" quit-window "quit" :color blue))
