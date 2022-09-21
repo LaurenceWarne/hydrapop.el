@@ -36,6 +36,7 @@
 
 (defun hydrapop-define-board (name banner columns)
   "Define a popup board with the given NAME, BANNER and COLUMNS."
+  ;; See https://github.com/abo-abo/hydra/issues/164
   (eval (hydrapop-define-board-hydra name banner columns)))
 
 (defun hydrapop-define-board-hydra (name banner columns)
@@ -49,7 +50,7 @@
           (-map (lambda (e) (list (hydrapop-entry-key e)
                                   (hydrapop-entry-command e)))
                 (apply #'append (-map #'hydrapop-column-entries columns)))
-          (list '("q" quit-window "quit" :color blue))))))
+          (list '("q" ignore "quit" :color blue))))))
 
 (defun hydrapop--gen-docstring (banner columns)
   "Generate a body string for BANNER and COLUMNS."
@@ -70,7 +71,7 @@
   "Return COLUMN stringified and padded to WIDTH."
   (pcase-let* ((desc (hydrapop-column-description column))
                (heading (hydrapop--center-string desc width))
-               (break (make-string width ?-)))
+               (break (s-repeat width "-")))
     (s-concat heading "\n" break "\n"
               (mapconcat (lambda (s) (hydrapop--entry-str s width))
                          (hydrapop-column-entries column)
@@ -85,19 +86,20 @@
 (defun hydrapop--center-string (s width)
   "Center the string S to WIDTH."
   (pcase-let ((`(,left ,r) (cl-floor (- width (length s)) 2)))
-    (s-concat (make-string (+ r left) ?\ ) s (s-repeat left " "))))
+    (s-concat (s-repeat (+ r left) " ") s (s-repeat left " "))))
 
 (defun hydrapop--v-center-string (s height)
   "Center the string S vertically to HEIGHT."
   (pcase-let* ((split (s-lines s))
                (`(,left ,r) (cl-floor (- height (length split)) 2))
-               (remainder (if (< 0 left) r 0))
+               (do-pad-r (< (length split) height))
+               (remainder (if do-pad-r r 0))
                (width (+ 3 (-max (-map #'length split))))
                (padding-line (s-repeat width " ")))
     (s-concat (s-join "\n" (-repeat (+ left remainder) padding-line))
-              (if (< 0 left) "\n" "")
+              (if do-pad-r "\n" "")
               (s-join "\n" (--map (s-pad-right width " " it) split))
-              (if (< 0 left) "\n" "")
+              (if do-pad-r "\n" "")
               (s-join "\n" (-repeat left padding-line)))))
 
 (defun hydrapop--width (obj)
@@ -107,35 +109,6 @@
                                                     (hydrapop-column-entries obj)))
                                       (length (hydrapop-column-description obj))))
         (t (error "Invalid type %s" (type-of obj)))))
-
-
-(setq col
-      (make-hydrapop-column
-       :description "My Cool Stuffs"
-       :entries (list (make-hydrapop-entry :description "Open"
-                                           :key "O"
-                                           :command (lambda() (interactive) (message "hi")))
-                      (make-hydrapop-entry :description "Close Please"
-                                           :key "C"
-                                           :command #'ignore)
-                      (make-hydrapop-entry :description "Reopen"
-                                           :key "R"
-                                           :command #'ignore)
-                      (make-hydrapop-entry :description "Deopen"
-                                           :key "D"
-                                           :command #'ignore)))
-      col2
-      (make-hydrapop-column
-       :description "My Cool Stuffs"
-       :entries (list (make-hydrapop-entry :description "Open"
-                                           :key "O"
-                                           :command (lambda() (interactive) (message "hi")))
-                      (make-hydrapop-entry :description "Close Please"
-                                           :key "C"
-                                           :command #'ignore)
-                      (make-hydrapop-entry :description "Reopen"
-                                           :key "R"
-                                           :command #'ignore))))
 
 
 (defun hydrapop-github-column ()
@@ -165,6 +138,21 @@
                                          :key "p"
                                          :command #'hydrapop-pr-current-branch)))))
 
+(defun hydrapop-projectile-column ()
+  "Return a hydrapop column with Projectile commands, requires Projectile."
+  (require 'projectile)
+  (make-hydrapop-column
+   :description "Projectile"
+   :entries (list (make-hydrapop-entry :description "Run tests"
+                                       :key "t"
+                                       :command #'projectile-test-project)
+                  (make-hydrapop-entry :description "Compile"
+                                       :key "c"
+                                       :command #'projectile-compile-project)
+                  (make-hydrapop-entry :description "Install"
+                                       :key "i"
+                                       :command #'projectile-install-project))))
+;; (hydrapop-define-board 'my-board banner (list (hydrapop-projectile-column) (hydrapop-github-column)))
 
 (provide 'hydrapop)
 
