@@ -30,10 +30,28 @@
 (cl-defstruct hydrapop-column description entries)
 (cl-defstruct hydrapop-entry description key function color)
 
-(defmacro hydrapop-define-board (name body &optional docstring &rest heads)
-  (defhydra name body docstring heads))
+;; (defmacro hydrapop-define-board (name body banner columns)
+;;   `(let ((docstring (hydrapop--gen-docstring ,banner ,columns)))
+;;      (defhydra ,name ,body docstring)))
 
-(defun hydrapop--gen-body-string (banner columns)
+(defun hydrapop-define-board (name banner columns)
+  "Define a popup board with the given NAME, BANNER and COLUMNS."
+  (eval (hydrapop-define-board-hydra name banner columns)))
+
+(defun hydrapop-define-board-hydra (name banner columns)
+  "Return the generated hydra call from NAME, BANNER and COLUMNS."
+  (let ((docstring (hydrapop--gen-docstring banner columns)))
+    `(defhydra
+       ,name
+       (:color pink :columns ,(length columns) :hint nil)
+       ,docstring
+       ,@(append
+          (-map (lambda (e) (list (hydrapop-entry-key e)
+                                  (hydrapop-entry-function e)))
+                (apply #'append (-map #'hydrapop-column-entries columns)))
+          (list '("q" quit-window "quit" :color blue))))))
+
+(defun hydrapop--gen-docstring (banner columns)
   "Generate a body string for BANNER and COLUMNS."
   (let* ((width (-max (-map #'hydrapop--width columns)))
          (s-cols (--map (hydrapop--column-str it width) columns))
@@ -46,7 +64,7 @@
          (zipped (apply #'-zip-lists
                         (append (list (s-lines banner-processed))
                                 (apply (-partial #'-pad padding) split-cols)))))
-    (s-join "\n" (--map (s-join "" it) zipped))))
+    (s-concat "\n" (s-join "\n" (--map (s-join "" it) zipped)) "\n")))
 
 (defun hydrapop--column-str (column width)
   (pcase-let* ((desc (hydrapop-column-description column))
@@ -59,7 +77,7 @@
 
 (defun hydrapop--entry-str (entry width)
   "Return ENTRY as a string padded to WIDTH."
-  (s-pad-right width " " (format " __%s__: %s"
+  (s-pad-right width " " (format " _%s_: %s"
                                  (hydrapop-entry-key entry)
                                  (hydrapop-entry-description entry))))
 
@@ -82,7 +100,7 @@
 
 (defun hydrapop--width (obj)
   "Return the width in chars of the entry or column OBJ."
-  (cond ((hydrapop-entry-p obj) (+ 8 (length (hydrapop-entry-description obj))))
+  (cond ((hydrapop-entry-p obj) (+ 6 (length (hydrapop-entry-description obj))))
         ((hydrapop-column-p obj) (max (-max (mapcar #'hydrapop--width
                                                     (hydrapop-column-entries obj)))
                                       (length (hydrapop-column-description obj))))
@@ -94,32 +112,31 @@
        :description "My Cool Stuffs"
        :entries (list (make-hydrapop-entry :description "Open"
                                            :key "O"
-                                           :function #'ignore
-                                           :color 'blue)
+                                           :function (lambda() (interactive) (message "hi")))
                       (make-hydrapop-entry :description "Close Please"
                                            :key "C"
-                                           :function #'ignore
-                                           :color 'blue)
+                                           :function #'ignore)
                       (make-hydrapop-entry :description "Reopen"
                                            :key "R"
-                                           :function #'ignore
-                                           :color 'blue)
+                                           :function #'ignore)
                       (make-hydrapop-entry :description "Deopen"
                                            :key "D"
-                                           :function #'ignore
-                                           :color 'blue))))
+                                           :function #'ignore))))
 
 (setq banner "   /\\/\\   ___| |_ __ _| |___ 
   /    \\ / _ \\ __/ _` | / __|
  / /\\/\\ \\  __/ || (_| | \\__ \\
  \\/    \\/\\___|\\__\\__,_|_|___/")
 
-(defhydra hydra-test (:color blue :hint nil :foreign-keys nil)
-  "   /\\/\\   ‗‗‗| |‗ ‗‗ ‗| |‗‗‗ 
-  /    \\ / ‗ \\ ‗‗/ ‗` | / ‗‗|
- / /\\/\\ \\  ‗‗/ || (‗| | \\‗‗ \\
- \\/    \\/\\‗‗‗|\\‗‗\\‗‗,‗|‗|‗‗‗/" ("c" ignore))
-
 (provide 'hydrapop)
 
 ;;; hydrapop.el ends here
+(defhydra my-board2 (:color pink :columns 1 :hint nil) "
+                                  My Cool Stuffs  
+   /\\/\\   ...| |. .. .| |...   ------------------
+  /    \\ / . \\ ../ .` | / ..|    _O_: Open        
+ / /\\/\\ \\  ../ || (.| | \\.. \\    _C_: Close Please
+ \\/    \\/\\...|\\..\\..,.|.|.../    _R_: Reopen      
+                                 _D_: Deopen
+"
+  ("O" (closure (t) nil (interactive) (message "hi"))) ("C" ignore) ("R" ignore) ("D" ignore) ("q" quit-window "quit" :color blue))
