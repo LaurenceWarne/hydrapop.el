@@ -27,6 +27,8 @@
   :group 'hydrapop
   :type 'string)
 
+(defconst hydrapop-key-choices "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
 (cl-defstruct hydrapop-column description entries)
 (cl-defstruct hydrapop-entry description key command color)
 
@@ -54,6 +56,7 @@
 
 (defun hydrapop--gen-docstring (banner columns)
   "Generate a body string for BANNER and COLUMNS."
+  (hydrapop--resolve-clashes (-flatten (-map #'hydrapop-column-entries columns)))
   (let* ((width (-max (-map #'hydrapop--width columns)))
          (s-cols (--map (hydrapop--column-str it width) columns))
          (split-cols (-map #'s-lines s-cols))
@@ -110,6 +113,22 @@
                                       (length (hydrapop-column-description obj))))
         (t (error "Invalid type %s" (type-of obj)))))
 
+(defun hydrapop--resolve-clashes (entries)
+  "Resolve key clashes in ENTRIES."
+  (let (used-keys)
+    (--each entries (let* ((requested-key (hydrapop-entry-key it))
+                           (key (hydrapop--get-key requested-key used-keys)))
+                      (cl-pushnew key used-keys)
+                      (setf (hydrapop-entry-key it) key)))))
+
+(defun hydrapop--get-key (requested used)
+  "Return REQUESTED if it isn't in USED, else select an appropriate key."
+  (let ((-compare-fn #'string=))
+    (cond ((and (-contains-p used requested) (s-uppercase-p requested))
+           (car (-difference hydrapop-key-choices used)))
+          ((-contains-p used requested)
+           (hydrapop--get-key (s-upcase requested) used))
+          (t requested))))
 
 (defun hydrapop-github-column ()
   "Return a hydrapop column for Github interaction, requires Magit."
@@ -152,7 +171,13 @@
                   (make-hydrapop-entry :description "Install"
                                        :key "i"
                                        :command #'projectile-install-project))))
-;; (hydrapop-define-board 'my-board banner (list (hydrapop-projectile-column) (hydrapop-github-column)))
+
+(defvar hydrapop--ex-banner "   /\\/\\   ___| |_ __ _| |___ 
+  /    \\ / _ \\ __/ _` | / __|
+ / /\\/\\ \\  __/ || (_| | \\__ \\
+ \\/    \\/\\___|\\__\\__,_|_|___/")
+
+;; (hydrapop-define-board 'my-board hydrapop--ex-banner (list (hydrapop-projectile-column) (hydrapop-github-column)))
 
 (provide 'hydrapop)
 
