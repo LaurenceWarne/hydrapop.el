@@ -32,11 +32,11 @@
 (cl-defstruct hydrapop-column description entries)
 (cl-defstruct hydrapop-entry description key command color)
 
-;; (defmacro hydrapop-define-board (name body banner columns)
-;;   `(let ((docstring (hydrapop--gen-docstring ,banner ,columns)))
-;;      (defhydra ,name ,body docstring)))
+(defmacro hydrapop-define-board (name banner columns)
+  "Define a popup board with the given NAME, BANNER and COLUMNS."
+  `(hydrapop--define-board ',name ,banner ,columns))
 
-(defun hydrapop-define-board (name banner columns)
+(defun hydrapop--define-board (name banner columns)
   "Define a popup board with the given NAME, BANNER and COLUMNS."
   ;; See https://github.com/abo-abo/hydra/issues/164
   (eval (hydrapop-define-board-hydra name banner columns)))
@@ -177,7 +177,7 @@
  / /\\/\\ \\  __/ || (_| | \\__ \\
  \\/    \\/\\___|\\__\\__,_|_|___/")
 
-;; (hydrapop-define-board 'my-board hydrapop--ex-banner (list (hydrapop-projectile-column) (hydrapop-github-column)))
+;; (hydrapop-define-board my-board hydrapop--ex-banner (list (hydrapop-projectile-column) (hydrapop-github-column)))
 
 (provide 'hydrapop)
 
