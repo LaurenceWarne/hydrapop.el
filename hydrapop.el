@@ -17,6 +17,8 @@
 (require 's)
 (require 'cl-lib)
 
+;;; Custom variables
+
 (defgroup hydrapop nil
   "Project-specific popup boards."
   :group 'bindings
@@ -27,13 +29,21 @@
   :group 'hydrapop
   :type 'string)
 
+(defcustom hydrapop-board nil
+  "Board to be opened by `hydrapop-invoke', intended for .dir-locals.el usage."
+  :group 'hydrapop
+  :type 'function)
+
 (defconst hydrapop-key-choices "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 (cl-defstruct hydrapop-column description entries)
 (cl-defstruct hydrapop-entry description key command color)
 
+;;; Functions
+
 (defmacro hydrapop-define-board (name banner columns)
   "Define a popup board with the given NAME, BANNER and COLUMNS."
+  (declare (indent defun))
   `(hydrapop--define-board ',name ,banner ,columns))
 
 (defun hydrapop--define-board (name banner columns)
@@ -171,6 +181,15 @@
                   (make-hydrapop-entry :description "Install"
                                        :key "i"
                                        :command #'projectile-install-project))))
+
+;;; Commands
+
+(defun hydrapop-invoke ()
+  "Invoke the default hydrapop board."
+  (interactive)
+  (if hydrapop-board
+      (funcall hydrapop-board)
+    (message "No board for current project.")))
 
 (defvar hydrapop--ex-banner "   /\\/\\   ___| |_ __ _| |___ 
   /    \\ / _ \\ __/ _` | / __|
