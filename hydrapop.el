@@ -118,8 +118,10 @@
 (defun hydrapop--width (obj)
   "Return the width in chars of the entry or column OBJ."
   (cond ((hydrapop-entry-p obj) (+ 6 (length (hydrapop-entry-description obj))))
-        ((hydrapop-column-p obj) (max (-max (mapcar #'hydrapop--width
-                                                    (hydrapop-column-entries obj)))
+        ((hydrapop-column-p obj) (max (if-let ((ls (mapcar #'hydrapop--width
+                                                           (hydrapop-column-entries obj))))
+                                          (-max ls)
+                                        0)
                                       (length (hydrapop-column-description obj))))
         (t (error "Invalid type %s" (type-of obj)))))
 
@@ -143,21 +145,31 @@
 (defun hydrapop-github-column ()
   "Return a hydrapop column for Github interaction, requires Magit."
   (require 'magit)
-  (cl-flet ((hp-open-gh-url () (interactive)
-                            (let* ((remotes (magit-list-remotes))
-                                   (remote (if (cl-member "upstream" remotes
-                                                          :test #'string=)
-                                               "upstream"
-                                             (car remotes)))
-                                   (url (shell-command-to-string
-                                         (format "git remote get-url %s"
-                                                 remote))))
-                              (browse-url
-                               (if (s-starts-with-p "ssh://" url)
-                                   (s-concat "http://"
-                                             (s-chop-prefix "ssh://git@" url))
-                                 url))))
-            (hp-pr-current-branch () (interactive) nil))
+  (cl-flet* ((get-remote-url (remote) (--> remote
+                                           (shell-command-to-string
+                                            (format "git remote get-url %s" it))
+                                           (if (s-starts-with-p "ssh://" it)
+                                               (s-concat "http://"
+                                                         (s-chop-prefix "ssh://git@" it))
+                                             it)
+                                           (s-trim it)))
+             (get-upstream-url () (let* ((remotes (magit-list-remotes))
+                                         (remote (if (cl-member "upstream" remotes
+                                                                :test #'string=)
+                                                     "upstream"
+                                                   (car remotes))))
+                                    (get-remote-url remote)))
+             (hp-open-gh-url () (interactive) (browse-url (get-upstream-url)))
+             (hp-pr-current-branch
+              () (interactive)
+              (call-interactively #'magit-push-current-to-pushremote)
+              (let* ((url (get-remote-url "origin"))
+                     (url-open (s-concat url
+                                         "/compare/"
+                                         (magit-get-current-branch)
+                                         "?expand=1")))
+                (message "Browsing '%s'" url-open)
+                (browse-url url-open))))
     (make-hydrapop-column
      :description "Github"
      :entries (list (make-hydrapop-entry :description "Open Repository URL"
@@ -165,7 +177,7 @@
                                          :command #'hp-open-gh-url)
                     (make-hydrapop-entry :description "PR Current Branch"
                                          :key "p"
-                                         :command #'hydrapop-pr-current-branch)))))
+                                         :command #'hp-pr-current-branch)))))
 
 (defun hydrapop-projectile-column ()
   "Return a hydrapop column with Projectile commands, requires Projectile."
@@ -181,6 +193,15 @@
                   (make-hydrapop-entry :description "Install"
                                        :key "i"
                                        :command #'projectile-install-project))))
+
+(defun hydrapop-column-from-lists (description &rest list)
+  "Make a hydrapop column from LIST with the given DESCRIPTION."
+  (make-hydrapop-column
+   :description description
+   :entries (--map (make-hydrapop-entry :description (cadr it)
+                                        :key (car it)
+                                        :command (caddr it))
+                   list)))
 
 ;;; Commands
 
