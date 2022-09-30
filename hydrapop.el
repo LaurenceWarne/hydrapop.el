@@ -24,11 +24,6 @@
   :group 'bindings
   :prefix "hydrapop-")
 
-(defcustom hydrapop-underscore-replacement "."
-  "Underscore replacement in hydra strings."
-  :group 'hydrapop
-  :type 'string)
-
 (defcustom hydrapop-board nil
   "Board to be opened by `hydrapop-invoke', intended for .dir-locals.el usage."
   :group 'hydrapop
@@ -71,13 +66,13 @@
          (s-cols (--map (hydrapop--column-str it width) columns))
          (split-cols (-map #'s-lines s-cols))
          (height (-max (-map #'length split-cols)))
-         (banner-processed (hydrapop--v-center-string
-                            (s-replace "_" hydrapop-underscore-replacement banner)
-                            height))
+         (banner-processed (hydrapop--v-center-string banner height))
          (padding (s-repeat width " "))
          (zipped (apply #'-zip-lists
-                        (append (list (s-lines banner-processed))
-                                (apply (-partial #'-pad padding) split-cols)))))
+                        (append (apply (-partial #'-pad padding)
+                                       (cons (-map #'hydrapop--format-string
+                                                   (s-lines banner-processed))
+                                             split-cols))))))
     (s-concat "\n" (s-join "\n" (--map (s-join "" it) zipped)) "\n")))
 
 (defun hydrapop--column-str (column width)
@@ -141,6 +136,15 @@
           ((-contains-p used requested)
            (hydrapop--get-key (s-upcase requested) used))
           (t requested))))
+
+(defun hydrapop--format-string (s)
+  "Return a list expression, which when evaled will return S.
+
+Used for inserting underscores into hydra docstrings."
+  (let ((u-count (s-count-matches "_" s)))
+    (format "%%s(format \"%s\" %s)"
+            (s-replace "\\" "\\\\" (s-replace "_" "%s" s))
+            (s-repeat u-count "\"_\" "))))
 
 (defun hydrapop-github-column ()
   "Return a hydrapop column for Github interaction, requires Magit."
