@@ -67,7 +67,7 @@
          (split-cols (-map #'s-lines s-cols))
          (height (-max (-map #'length split-cols)))
          (banner-processed (hydrapop--v-center-string banner height))
-         (padding (s-repeat width " "))
+         (padding (s-concat "^ ^" (s-repeat (- width 3) " ")))
          (zipped (apply #'-zip-lists
                         (append (apply (-partial #'-pad padding)
                                        (cons (-map #'hydrapop--format-string
