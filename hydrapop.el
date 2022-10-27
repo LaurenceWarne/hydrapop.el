@@ -152,6 +152,10 @@ Used for inserting underscores into hydra docstrings."
 (declare-function magit-push-current-to-pushremote "magit.el")
 (declare-function magit-list-remotes "magit.el")
 
+(defun hydrapop-browse-url (url)
+  "Return an interactive function which when called browses URL."
+  (lambda () (interactive) (browse-url url)))
+
 (defun hydrapop-github-column ()
   "Return a hydrapop column for Github interaction, requires Magit."
   (unless (featurep 'magit)
