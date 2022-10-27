@@ -16,6 +16,8 @@
 (require 'dash)
 (require 's)
 (require 'cl-lib)
+(require 'projectile nil t)
+(require 'magit nil t)
 
 ;;; Custom variables
 
@@ -146,9 +148,14 @@ Used for inserting underscores into hydra docstrings."
             (s-replace "\\" "\\\\" (s-replace "_" "%s" s))
             (s-repeat u-count "\"_\" "))))
 
+(declare-function magit-get-current-branch "magit.el")
+(declare-function magit-push-current-to-pushremote "magit.el")
+(declare-function magit-list-remotes "magit.el")
+
 (defun hydrapop-github-column ()
   "Return a hydrapop column for Github interaction, requires Magit."
-  (require 'magit)
+  (unless (featurep 'magit)
+    (error "The column hydrapop-github-column requires magit to be installed"))
   (cl-flet* ((get-remote-url (remote) (--> remote
                                            (shell-command-to-string
                                             (format "git remote get-url %s" it))
@@ -183,9 +190,14 @@ Used for inserting underscores into hydra docstrings."
                                          :key "p"
                                          :command #'hp-pr-current-branch)))))
 
+(declare-function projectile-install-project "projectile.el")
+(declare-function projectile-compile-project "projectile.el")
+(declare-function projectile-test-project "projectile.el")
+
 (defun hydrapop-projectile-column ()
   "Return a hydrapop column with Projectile commands, requires Projectile."
-  (require 'projectile)
+  (unless (featurep 'projectile)
+    (error "The column hydrapop-projectile-column requires projectile to be installed"))
   (make-hydrapop-column
    :description "Projectile"
    :entries (list (make-hydrapop-entry :description "Run tests"
@@ -215,13 +227,6 @@ Used for inserting underscores into hydra docstrings."
   (if hydrapop-board
       (funcall hydrapop-board)
     (message "No board for current project.")))
-
-(defvar hydrapop--ex-banner "   /\\/\\   ___| |_ __ _| |___ 
-  /    \\ / _ \\ __/ _` | / __|
- / /\\/\\ \\  __/ || (_| | \\__ \\
- \\/    \\/\\___|\\__\\__,_|_|___/")
-
-;; (hydrapop-define-board my-board hydrapop--ex-banner (list (hydrapop-projectile-column) (hydrapop-github-column)))
 
 (provide 'hydrapop)
 
