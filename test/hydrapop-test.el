@@ -7,5 +7,4 @@
 ;;; Code:
 
 (require 'buttercup)
-
-(require 'hydrapop.el)
+(require 'hydrapop)
