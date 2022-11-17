@@ -156,6 +156,18 @@ Used for inserting underscores into hydra docstrings."
   "Return an interactive function which when called browses URL."
   (lambda () (interactive) (browse-url url)))
 
+(defun hydrapop-async-shell-command (cmd)
+  "Return an interactive function which when called will run CMD asynchronously."
+  (lambda () (interactive) (async-shell-command cmd)))
+
+(defun hydrapop-async-shell-command-from-project-root (cmd)
+  "Same as `hydrapop-async-shell-command', but execute CMD from the project root."
+  (lambda () (interactive)
+    (let ((default-directory
+            (or (and (fboundp #'projectile-project-root) (projectile-project-root))
+                (and (require 'project) (project-root (project-current))))))
+      (async-shell-command cmd))))
+
 (defun hydrapop-github-column ()
   "Return a hydrapop column for Github interaction, requires Magit."
   (unless (featurep 'magit)

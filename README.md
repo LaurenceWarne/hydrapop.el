@@ -95,7 +95,7 @@ __"
   (list (hydrapop-column-from-lists
          "Links"
          `("b" "Bug Tracker"
-          ,(hydrapop-browse-url "https://debbugs.gnu.org/cgi/pkgreport.cgi?bug-rev=on;package=emacs"))
+           ,(hydrapop-browse-url "https://debbugs.gnu.org/cgi/pkgreport.cgi?bug-rev=on;package=emacs"))
          `("c" "Contributing"
            ,(hydrapop-browse-url "https://www.gnu.org/software/emacs/manual/html_node/emacs/Contributing.html"))
          `("C" "Customization Types"
@@ -107,16 +107,19 @@ __"
          `("B" "Contributing Blog Post"
            ,(hydrapop-browse-url "https://www.fosskers.ca/en/blog/contributing-to-emacs"))
          `("h" "Emacs Homepage"
-           ,(hydrapop-browse-url "https://www.gnu.org/software/emacs/")))
+           ,(hydrapop-browse-url "https://www.gnu.org/software/emacs/"))
+         `("f" "Standard Faces"
+           ,(hydrapop-browse-url "https://www.gnu.org/software/emacs/manual/html_node/emacs/Standard-Faces.html")))
         (hydrapop-column-from-lists
          "Commands"
-         '("r" "Build and Run Emacs"
-           (lambda ()
-             (interactive)
-             (async-shell-command
-              (format
-               "make extraclean && ./autogen.sh && ./configure && make && src/emacs --Q"
-               (projectile-project-root))))))))
+         `("r" "Build and Run Emacs -Q"
+           ,(hydrapop-async-shell-command-from-project-root
+             "make extraclean && ./autogen.sh && ./configure && make && src/emacs -Q"))
+         `("R" "Build and Run Emacs with init"
+           ,(hydrapop-async-shell-command-from-project-root
+             "make extraclean && ./autogen.sh && ./configure && make && src/emacs")))))
 ```
 
-![hydrapop-emacs-example](https://user-images.githubusercontent.com/17688577/201528354-35485094-8c6c-4261-95ba-e0ef6655620a.png)
+![hydrapop-emacs-example](https://user-images.githubusercontent.com/17688577/202437822-8e4aadf4-3d17-4cbd-b539-b720e4b99f16.png)
+
+`hydrapop-async-shell-command-from-project-root` is similar to `hydrapop-browse-url` in that it's just convenience function to save us from having to write a lambda around `async-shell-command`.
