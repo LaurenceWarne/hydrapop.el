@@ -12,6 +12,12 @@ It's not currently on any package archive, installing from source is the only op
   :bind ("C-M-c" . hydrapop-invoke))
 ```
 
+Alternatively, you can manually copy it to somewhere on your [load path](https://www.emacswiki.org/emacs/LoadPath):
+
+```bash
+curl -X GET https://raw.githubusercontent.com/LaurenceWarne/hydrapop.el/master/hydrapop.el > /somewhere/on/your/load/path
+```
+
 ## Examples
 
 General strategy:
