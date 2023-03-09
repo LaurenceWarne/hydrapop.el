@@ -244,6 +244,22 @@ Used for inserting underscores into hydra docstrings."
       (funcall hydrapop-board)
     (message "No board for current project.")))
 
+;;;###autoload
+(defun hydrapop-init-dir-locals ()
+  "Open an insert a dir-locals template for hydrapop."
+  (interactive)
+  ;; Based off projectile-edit-dir-locals
+  (if (boundp #'projectile-project-root)
+      (let ((file (expand-file-name ".dir-locals.el" (projectile-acquire-root))))
+        (find-file file)
+        (unless (file-exists-p file)
+          (unwind-protect
+              (insert "((nil . ((eval . (hydrapop-define-board hydrapop-project-board
+		   \"Your fancy Ascii art here\"
+		   (list (hydrapop-projectile-column) (hydrapop-github-column))))
+	 (hydrapop-board . hydrapop-project-board/body))))")
+            (save-buffer))))))
+
 (provide 'hydrapop)
 
 ;;; hydrapop.el ends here
