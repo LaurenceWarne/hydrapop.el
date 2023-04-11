@@ -129,3 +129,44 @@ __"
 ![hydrapop-emacs-example](https://user-images.githubusercontent.com/17688577/202437822-8e4aadf4-3d17-4cbd-b539-b720e4b99f16.png)
 
 `hydrapop-async-shell-command-from-project-root` is similar to `hydrapop-browse-url` in that it's just convenience function to save us from having to write a lambda around `async-shell-command`.
+
+### [Metals](https://github.com/scalameta/metals/)
+
+```elisp
+(hydrapop-define-board hp-metals-project-board
+  "   /\\/\\   ___| |_ __ _| |___ 
+  /    \\ / _ \\ __/ _` | / __|
+ / /\\/\\ \\  __/ || (_| | \\__ \\
+ \\/    \\/\\___|\\__\\__,_|_|___/"
+  (list (hydrapop-github-column)
+		(hydrapop-column-from-lists
+		 "Links"
+		 `("d" "Open Documentation"
+		   ,(hydrapop-browse-url "https://scalameta.org/metals/docs/"))
+		 `("l" "Open LSP Specification"
+		   ,(hydrapop-browse-url "https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/"))
+         `("b" "Open BSP Specification"
+		   ,(hydrapop-browse-url "https://build-server-protocol.github.io/docs/specification.html")))
+		(hydrapop-column-from-lists
+		 "Run"
+		 `("w" "Run Site Locally"
+		   ,(lambda ()
+              (interactive)
+              (let* ((output-buffer (generate-new-buffer "docusaurus"))
+				     (proc (progn
+					         (async-shell-command
+					          (format
+					           "cd %s && sbt docs/docusaurusCreateSite && (cd website && npm run serve)"
+					           (projectile-project-root)))
+					         (get-buffer-process output-buffer))))
+				(if (process-live-p proc)
+				    (set-process-sentinel
+                     proc
+                     (lambda (proc change)
+				       (browse-url "http://localhost:3000/")))))))
+		 `("i" "Install Locally"
+		   ,(hydrapop-async-shell-command-from-project-root
+			 "sbt +publishLocal && coursier bootstrap --java-opt -Dmetals.client=emacs org.scalameta:metals_2.13:0.11.12-SNAPSHOT -r bintray:scalacenter/releases -o ~/bin/metals-snapshot -f")))))
+```
+
+![hydrapop-metals](https://user-images.githubusercontent.com/17688577/231105787-f8656d58-18be-49e6-ab17-9a947c0b9f11.png)
