@@ -31,6 +31,15 @@
   :group 'hydrapop
   :type 'function)
 
+(defcustom hydrapop-ticket-url-f-string nil
+  "Format string to be used by `hydrapop-open-ticket'.
+
+Intended for .dir-locals.el usage.
+
+Example value: \"https://my-org.atlassian.net/browse/%s\""
+  :group 'hydrapop
+  :type 'string)
+
 (defconst hydrapop-key-choices "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 (cl-defstruct hydrapop-column description entries)
@@ -152,14 +161,17 @@ Used for inserting underscores into hydra docstrings."
 (declare-function magit-push-current-to-pushremote "magit.el")
 (declare-function magit-list-remotes "magit.el")
 
+;;;###autoload
 (defun hydrapop-browse-url (url)
   "Return an interactive function which when called browses URL."
   (lambda () (interactive) (browse-url url)))
 
+;;;###autoload
 (defun hydrapop-async-shell-command (cmd)
   "Return an interactive function which when called will run CMD asynchronously."
   (lambda () (interactive) (async-shell-command cmd)))
 
+;;;###autoload
 (defun hydrapop-async-shell-command-from-project-root (cmd)
   "Same as `hydrapop-async-shell-command', but execute CMD from the project root."
   (lambda () (interactive)
@@ -168,10 +180,11 @@ Used for inserting underscores into hydra docstrings."
                 (and (require 'project) (project-root (project-current))))))
       (async-shell-command cmd))))
 
+;;;###autoload
 (defun hydrapop-github-column ()
   "Return a hydrapop column for Github interaction, requires Magit."
   (unless (featurep 'magit)
-    (error "The column hydrapop-github-column requires magit to be installed"))
+    (user-error "The column hydrapop-github-column requires magit to be installed"))
   (cl-flet* ((get-remote-url (remote) (--> remote
                                            (shell-command-to-string
                                             (format "git remote get-url %s" it))
@@ -206,14 +219,36 @@ Used for inserting underscores into hydra docstrings."
                                          :key "p"
                                          :command #'hp-pr-current-branch)))))
 
+;;;###autoload
+(defun hydrapop-open-ticket ()
+  "Open the current ticket, determined from the current git branch.
+
+Smart enough to recognise slash prefixes e.g. \"feature/abc-3432-...\".
+
+Requires the variable `hydrapop-ticket-url-f-string' to be set, most likely
+in your .dir-locals."
+  (interactive)
+  (unless (featurep 'magit)
+    (user-error "The function `hydrapop-open-ticket' requires magit to be installed"))
+  (if-let* ((branch (magit-get-current-branch))
+            (match (cadr (s-match (rx bos (? (* anychar) "/")
+                                      (group (* anychar) "-" (+ digit))) branch)))
+            ;; TODO error if `hydrapop-ticket-url-f-string' is nil here
+            (url (format hydrapop-ticket-url-f-string match)))
+      (progn
+        (message "Opening %s" url)
+        (browse-url url))
+    (message "Couldn't determine ticket from %s" (magit-get-current-branch))))
+
 (declare-function projectile-install-project "projectile.el")
 (declare-function projectile-compile-project "projectile.el")
 (declare-function projectile-test-project "projectile.el")
 
+;;;###autoload
 (defun hydrapop-projectile-column ()
   "Return a hydrapop column with Projectile commands, requires Projectile."
   (unless (featurep 'projectile)
-    (error "The column hydrapop-projectile-column requires projectile to be installed"))
+    (user-error "The column hydrapop-projectile-column requires projectile to be installed"))
   (make-hydrapop-column
    :description "Projectile"
    :entries (list (make-hydrapop-entry :description "Run tests"
@@ -226,6 +261,7 @@ Used for inserting underscores into hydra docstrings."
                                        :key "i"
                                        :command #'projectile-install-project))))
 
+;;;###autoload
 (defun hydrapop-column-from-lists (description &rest list)
   "Make a hydrapop column from LIST with the given DESCRIPTION."
   (make-hydrapop-column
@@ -237,6 +273,7 @@ Used for inserting underscores into hydra docstrings."
 
 ;;; Commands
 
+;;;###autoload
 (defun hydrapop-invoke ()
   "Invoke the default hydrapop board."
   (interactive)
