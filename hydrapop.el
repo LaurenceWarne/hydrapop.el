@@ -42,6 +42,11 @@ Example value: \"https://my-org.atlassian.net/browse/%s\""
 
 (defconst hydrapop-key-choices "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
+(defconst hydrapop-db-alist-inhibit
+  (list
+   (cons
+    "\\*Async Shell Command\\*.*" (cons #'display-buffer-no-window nil))))
+
 (cl-defstruct hydrapop-column description entries)
 (cl-defstruct hydrapop-entry description key command color)
 
@@ -167,17 +172,26 @@ Used for inserting underscores into hydra docstrings."
   (lambda () (interactive) (browse-url url)))
 
 ;;;###autoload
-(defun hydrapop-async-shell-command (cmd)
-  "Return an interactive function which when called will run CMD asynchronously."
-  (lambda () (interactive) (async-shell-command cmd)))
+(defun hydrapop-async-shell-command (cmd &optional no-popup)
+  "Return an interactive function which when called will run CMD asynchronously.
+
+If NO-POPUP is non-nil, don't display the shell command buffer popup."
+  (lambda () (interactive)
+    (let ((display-buffer-alist
+           (if no-popup hydrapop-db-alist-inhibit display-buffer-alist)))
+      (async-shell-command cmd))))
 
 ;;;###autoload
-(defun hydrapop-async-shell-command-from-project-root (cmd)
-  "Same as `hydrapop-async-shell-command', but execute CMD from the project root."
+(defun hydrapop-async-shell-command-from-project-root (cmd &optional no-popup)
+  "Same as `hydrapop-async-shell-command', but execute CMD from the project root.
+
+If NO-POPUP is non-nil, don't display the shell command buffer popup"
   (lambda () (interactive)
     (let ((default-directory
             (or (and (fboundp #'projectile-project-root) (projectile-project-root))
-                (and (require 'project) (project-root (project-current))))))
+                (and (require 'project) (project-root (project-current)))))
+          (display-buffer-alist
+           (if no-popup hydrapop-db-alist-inhibit display-buffer-alist)))
       (async-shell-command cmd))))
 
 ;;;###autoload
