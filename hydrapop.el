@@ -208,10 +208,14 @@ If NO-POPUP is non-nil, don't display the shell command buffer popup"
                                              it)
                                            (s-trim it)))
              (get-upstream-url () (let* ((remotes (magit-list-remotes))
-                                         (remote (if (cl-member "upstream" remotes
-                                                                :test #'string=)
-                                                     "upstream"
-                                                   (car remotes))))
+                                         (remote
+                                          (cond ((cl-member "upstream" remotes
+                                                            :test #'string=)
+                                                 "upstream")
+                                                ((cl-member "origin" remotes
+                                                            :test #'string=)
+                                                 "origin")
+                                                (t (car remotes)))))
                                     (get-remote-url remote)))
              (hp-open-gh-url () (interactive) (browse-url (get-upstream-url)))
              (hp-pr-current-branch
