@@ -148,7 +148,7 @@ Example value: \"https://my-org.atlassian.net/browse/%s\""
   "Return REQUESTED if it isn't in USED, else select an appropriate key."
   (let ((-compare-fn #'string=))
     (cond ((and (-contains-p used requested) (s-uppercase-p requested))
-           (car (-difference hydrapop-key-choices used)))
+           (car (-difference (-map #'char-to-string (string-to-list hydrapop-key-choices)) used)))
           ((-contains-p used requested)
            (hydrapop--get-key (s-upcase requested) used))
           (t requested))))
