@@ -40,6 +40,18 @@ Example value: \"https://my-org.atlassian.net/browse/%s\""
   :group 'hydrapop
   :type 'string)
 
+(defcustom hydrapop-default-board
+  (hydrapop-define-board hydrapop-project-board
+    " _           _
+| |_ _  _ __| |_ _ __ _ _ __  ___ _ __
+| ' \\ || / _` | '_/ _` | '_ \\/ _ \\ '_ \\
+|_||_\\_, \\__,_|_| \\__,_| .__/\\___/ .__/
+     |__/              |_|       |_|"
+    (list (hydrapop-projectile-column) (hydrapop-github-column)))
+  "Default board to be used when `hydrapop-board' is not set."
+  :group 'hydrapop
+  :type 'function)
+
 (defconst hydrapop-key-choices "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 (defconst hydrapop-db-alist-inhibit
@@ -297,7 +309,7 @@ in your .dir-locals."
   (interactive)
   (if hydrapop-board
       (funcall hydrapop-board)
-    (message "No board for current project.")))
+    (funcall hydrapop-default-board)))
 
 ;;;###autoload
 (defun hydrapop-init-dir-locals ()
