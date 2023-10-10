@@ -40,18 +40,6 @@ Example value: \"https://my-org.atlassian.net/browse/%s\""
   :group 'hydrapop
   :type 'string)
 
-(defcustom hydrapop-default-board
-  (hydrapop-define-board hydrapop-project-board
-    " _           _
-| |_ _  _ __| |_ _ __ _ _ __  ___ _ __
-| ' \\ || / _` | '_/ _` | '_ \\/ _ \\ '_ \\
-|_||_\\_, \\__,_|_| \\__,_| .__/\\___/ .__/
-     |__/              |_|       |_|"
-    (list (hydrapop-projectile-column) (hydrapop-github-column)))
-  "Default board to be used when `hydrapop-board' is not set."
-  :group 'hydrapop
-  :type 'function)
-
 (defconst hydrapop-key-choices "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 (defconst hydrapop-db-alist-inhibit
@@ -69,6 +57,7 @@ Example value: \"https://my-org.atlassian.net/browse/%s\""
   (declare (indent defun))
   `(hydrapop--define-board ',name ,banner ,columns))
 
+;;;###autoload
 (defun hydrapop--define-board (name banner columns)
   "Define a popup board with the given NAME, BANNER and COLUMNS."
   ;; See https://github.com/abo-abo/hydra/issues/164
@@ -326,6 +315,18 @@ in your .dir-locals."
 		   (list (hydrapop-projectile-column) (hydrapop-github-column))))
 	 (hydrapop-board . hydrapop-project-board/body))))")
             (save-buffer))))))
+
+(defcustom hydrapop-default-board
+  (hydrapop--define-board 'hydrapop-default-board
+                          " _           _
+| |_ _  _ __| |_ _ __ _ _ __  ___ _ __
+| ' \\ || / _` | '_/ _` | '_ \\/ _ \\ '_ \\
+|_||_\\_, \\__,_|_| \\__,_| .__/\\___/ .__/
+     |__/              |_|       |_|"
+                          (list (hydrapop-projectile-column) (hydrapop-github-column)))
+  "Default board to be used when `hydrapop-board' is not set."
+  :group 'hydrapop
+  :type 'function)
 
 (provide 'hydrapop)
 
